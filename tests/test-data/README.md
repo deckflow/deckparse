@@ -1,9 +1,9 @@
 # Conformance fixtures
 
 `scripts/conformance.mjs` drives the built CLI against a real backend with
-every document in this directory, asserting the acceptance criteria from
-[`docs/pdf.md` §11](../../docs/pdf.md): artifact layout, local reuse with zero
-cloud calls, convert-without-reparse, and durable (non-expiring) markdown.
+every document in this directory, asserting the acceptance criteria: artifact
+layout, local reuse with zero cloud calls, convert-without-reparse, and
+durable (non-expiring) markdown.
 
 The documents themselves are **not** in the repository — they are large, and
 the ones that exercise parsing well tend to be real work files. Bring your own

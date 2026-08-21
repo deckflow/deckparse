@@ -79,7 +79,17 @@ $ deckparse convert doc/ --json
 }
 ```
 
-Errors carry a stable `error.code` (`ir_expired`, `quota_error`, …) and a distinct exit code — see [`docs/rfc.md` §5.4](docs/rfc.md) for the full table.
+Errors carry a stable `error.code` and a distinct exit code:
+
+| exit | `error.code` | meaning |
+| --- | --- | --- |
+| 2 | `usage_error` | bad flags, or a flag that cannot apply to this input |
+| 3 | `unsupported` | unsupported extension or `--to` target |
+| 4 | `auth_error` | credential rejected or expired |
+| 5 | `input_error`, `ir_not_found`, `ir_expired`, `ir_schema_unsupported`, `ir_invalid`, `asset_error` | fixable by the caller — each carries a hint saying how |
+| 6 | `backend_error` | task failed; includes the taskId for follow-up |
+| 7 | `not_implemented` | reserved verbs (`extract`, `modify`, `export`) |
+| 8 | `quota_error` | guest quota exhausted — `deckparse auth login` |
 
 ## Authentication is shared
 
@@ -123,8 +133,6 @@ CONFORMANCE_PDF=sample.pdf CONFORMANCE_PPTX=sample.pptx pnpm conformance
 ```
 
 The `--json` envelope, error codes, exit codes, artifact layout and the shared credential file format are public contracts. Changing any of them is a breaking change; note it in `CHANGELOG.md`.
-
-Design documents: [`docs/pdf.md`](docs/pdf.md) (product), [`docs/rfc.md`](docs/rfc.md) (technical), [`docs/upstream/`](docs/upstream/) (cloud contracts).
 
 ## License
 
