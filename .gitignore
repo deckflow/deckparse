@@ -5,3 +5,7 @@ coverage/
 .DS_Store
 .env
 tmp/
+
+# Conformance fixtures are real work files — bring your own (see its README).
+tests/test-data/*
+!tests/test-data/README.md

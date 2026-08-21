@@ -3,10 +3,11 @@
  * Conformance: drive the built CLI against a real backend, one document per
  * format plus a URL, asserting the acceptance criteria from docs/pdf.md §11.
  *
- * Needs credentials and sample files:
- *   DECKPARSE_API_BASE=…  DECKPARSE_TOKEN=…  \
- *   CONFORMANCE_PDF=… CONFORMANCE_PPTX=… CONFORMANCE_DOCX=… CONFORMANCE_KEY=… \
- *   CONFORMANCE_URL=https://example.com  node scripts/conformance.mjs
+ * Fixtures come from tests/test-data/test.<ext> (see its README; untracked,
+ * bring your own). CONFORMANCE_<EXT> environment variables override, and
+ * CONFORMANCE_URL adds a link one-shot case:
+ *
+ *   DECKPARSE_API_BASE=…  DECKPARSE_TOKEN=…  node scripts/conformance.mjs
  *
  * Uses an isolated DECKFLOW_CONFIG_DIR so inherited credentials from other
  * DeckFlow tools cannot leak into the run.
@@ -51,11 +52,19 @@ const run = (args, options = {}) => {
 };
 const runJson = (args) => JSON.parse(run([...args, '--json']));
 
+const dataDir = path.join(root, 'tests/test-data');
+const sampleFor = (ext) => {
+  const override = process.env[`CONFORMANCE_${ext.toUpperCase()}`];
+  if (override) return override;
+  const fixture = path.join(dataDir, `test.${ext}`);
+  return existsSync(fixture) ? fixture : undefined;
+};
+
 const samples = [
-  ['pdf', process.env.CONFORMANCE_PDF],
-  ['pptx', process.env.CONFORMANCE_PPTX],
-  ['docx', process.env.CONFORMANCE_DOCX],
-  ['key', process.env.CONFORMANCE_KEY],
+  ['pdf', sampleFor('pdf')],
+  ['pptx', sampleFor('pptx')],
+  ['docx', sampleFor('docx')],
+  ['key', sampleFor('key')],
 ];
 
 for (const [format, sample] of samples) {
@@ -110,6 +119,20 @@ check('unsupported input fails with exit 3 and a hint', () => {
     if (error.status !== 3) throw new Error(`exit ${error.status}, wanted 3`);
   }
 });
+
+// Negative fixtures: real spreadsheet/iWork files must be refused, not mangled.
+for (const ext of ['xlsx', 'numbers']) {
+  const sample = sampleFor(ext);
+  if (!sample) continue;
+  check(`${ext}: real file is refused with unsupported (exit 3)`, () => {
+    try {
+      run(['parse', sample]);
+      throw new Error('should have failed');
+    } catch (error) {
+      if (error.status !== 3) throw new Error(`exit ${error.status}, wanted 3`);
+    }
+  });
+}
 
 console.log(failures === 0 ? '\nconformance: all green' : `\nconformance: ${failures} failure(s)`);
 process.exit(failures === 0 ? 0 : 1);

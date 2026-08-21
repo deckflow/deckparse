@@ -1,3 +1,5 @@
+import { statSync } from 'node:fs';
+import path from 'node:path';
 import {
   APIError,
   createDeck,
@@ -22,6 +24,16 @@ export interface CloudClient {
   convert(ref: ConvertRef, options?: SdkConvertOptions): Promise<ConvertResult>;
 }
 
+/**
+ * Files at or above this size are uploaded to storage first (chunked, via
+ * presigned URLs) and the task references the fileId. Inlining a large
+ * multipart body into task creation trips gateway timeouts, and the SDK's
+ * network-level retry of that POST is not idempotent — the real backend showed
+ * one 9 MB pptx spawning eight duplicate tasks. Found by conformance with real
+ * fixtures; small synthetic files never hit it.
+ */
+export const PRE_UPLOAD_THRESHOLD = 4 * 1024 * 1024;
+
 export function createCloudClient(credentials: ResolvedCredentials): CloudClient {
   const deck: DeckClient = createDeck({
     root: credentials.apiBase,
@@ -33,7 +45,7 @@ export function createCloudClient(credentials: ResolvedCredentials): CloudClient
   return {
     parse: async (source, options) => {
       try {
-        return await deck.parse(source, options);
+        return await deck.parse(await preUploadLarge(deck, source), options);
       } catch (error) {
         throw translate(error);
       }
@@ -46,6 +58,41 @@ export function createCloudClient(credentials: ResolvedCredentials): CloudClient
       }
     },
   };
+}
+
+async function preUploadLarge(deck: DeckClient, source: ParseSource): Promise<ParseSource> {
+  const large = largeUpload(source);
+  if (!large) {
+    return source;
+  }
+  const uploaded = await deck.files.upload(large.input, { name: large.name });
+  return { fileId: uploaded.id, name: large.name };
+}
+
+function largeUpload(source: ParseSource): { input: string | Uint8Array; name: string } | undefined {
+  if (typeof source === 'string') {
+    try {
+      if (statSync(source).size >= PRE_UPLOAD_THRESHOLD) {
+        return { input: source, name: path.basename(source) };
+      }
+    } catch {
+      // Missing files fail later with the SDK's own message.
+    }
+    return undefined;
+  }
+  if (typeof source === 'object' && source !== null && 'file' in source) {
+    const { file } = source;
+    if (typeof file === 'string') {
+      return largeUpload(file);
+    }
+    if (typeof file === 'object' && file !== null && 'input' in file) {
+      const nested = file as { input: unknown; name?: string };
+      if (nested.input instanceof Uint8Array && nested.input.byteLength >= PRE_UPLOAD_THRESHOLD) {
+        return { input: nested.input, name: nested.name ?? source.name ?? 'upload.bin' };
+      }
+    }
+  }
+  return undefined;
 }
 
 /** Backend body codes → our codes. The precise `ir_*` codes pass through verbatim. */
