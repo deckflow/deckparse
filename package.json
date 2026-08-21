@@ -1,0 +1,72 @@
+{
+  "name": "@deckflow/deckparse",
+  "version": "0.1.0",
+  "description": "Parse any document into an agent-operable representation. Parse once, convert repeatedly: PDF, PPTX, DOCX, Keynote and URLs into durable IR artifacts and Markdown.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "deckparse": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm typecheck && pnpm test:unit && pnpm test:integration && pnpm build",
+    "conformance": "node scripts/conformance.mjs"
+  },
+  "keywords": [
+    "cli",
+    "parse",
+    "deckflow",
+    "pdf",
+    "pptx",
+    "docx",
+    "keynote",
+    "markdown",
+    "ir",
+    "document-parsing"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deckflow/deckparse.git"
+  },
+  "homepage": "https://github.com/deckflow/deckparse#readme",
+  "bugs": {
+    "url": "https://github.com/deckflow/deckparse/issues"
+  },
+  "dependencies": {
+    "@deckops/sdk": "^0.8.0-next.0",
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "open": "^10.1.0",
+    "p-limit": "^5.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
